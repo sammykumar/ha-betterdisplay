@@ -76,7 +76,7 @@ Errors are not signalled by status code. A refused read, an unknown UUID and an 
 
 ### Reading a DDC value with its max means different things on different registers
 
-On luminance, separate reads of value and max were stable at `100` and `50` across five consecutive samples, and the combined `--value --max` form returned `100,50` — so there it really is (value, max). On `inputSelect` the same form returned `15,3`, which matches neither ordering against the panel's 1–12 input list. The pair is register-dependent and was only pinned down on one display, so nothing here depends on it; the integration reads no DDC registers.
+On luminance, separate reads of value and max were stable at `100` and `50` across five consecutive samples, and the combined `--value --max` form returned `100,50` — so there it really is (value, max). On `inputSelect` the same form returned `15,3`, which matches neither ordering against the panel's 1–40 input list. The pair is register-dependent and was only pinned down on one display, so nothing here depends on it; the integration reads no DDC registers.
 
 ### `inputSourceList` lists inputs the panel doesn't have
 
