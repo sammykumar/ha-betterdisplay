@@ -1,0 +1,87 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to BetterDisplay",
+        "description": "Point Home Assistant at the Mac running BetterDisplay. Turn on the HTTP integration API first, in BetterDisplay under Settings › Integration.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "Integration token"
+        },
+        "data_description": {
+          "host": "Hostname or IP address of the Mac. A .local name only works if mDNS reaches this Home Assistant instance; if the connection test fails, try the IP address instead.",
+          "port": "Port the BetterDisplay HTTP API listens on. Leave at 55777 unless you changed it in BetterDisplay.",
+          "token": "Strongly recommended. BetterDisplay listens on every network interface and ships with token authentication turned off, so until you set a token, anything on your LAN can change your monitors. Generate one in BetterDisplay under Settings › Integration and paste it here."
+        }
+      },
+      "confirm": {
+        "title": "Displays found",
+        "description": "BetterDisplay on {host} reported {count} display(s):\n\n{displays}\n\nEach display is probed once now to work out which controls it answers, so this can take a few seconds. Submit to add them."
+      },
+      "reconfigure": {
+        "title": "Reconfigure {title}",
+        "description": "Update how Home Assistant reaches BetterDisplay. Capabilities are re-probed on save, so use this after moving the Mac to a new address or adding a token.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "token": "Integration token"
+        },
+        "data_description": {
+          "host": "Hostname or IP address of the Mac. Changing this keeps your existing entities and their history.",
+          "port": "Port the BetterDisplay HTTP API listens on. Leave at 55777 unless you changed it in BetterDisplay.",
+          "token": "Strongly recommended. Leave empty only if BetterDisplay's token authentication is off, which means any device on your LAN can drive your monitors."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach BetterDisplay. Check that the Mac is awake and on the network, that BetterDisplay is running, and that its integration API is enabled on this port.",
+      "invalid_auth": "BetterDisplay rejected the token. Copy it again from Settings › Integration, or clear the field if token authentication is off.",
+      "no_displays": "BetterDisplay answered but reported no displays. Check that a monitor is connected and awake, then try again.",
+      "unknown": "BetterDisplay returned an unexpected response. Check the Home Assistant log for details."
+    },
+    "abort": {
+      "already_configured": "That host is already set up.",
+      "reconfigure_successful": "BetterDisplay was reconfigured and reloaded."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "BetterDisplay options",
+        "description": "Connected to {host}.\n\n{displays}",
+        "sections": {
+          "polling": {
+            "name": "Polling",
+            "description": "How often Home Assistant asks BetterDisplay for the current state of each display.",
+            "data": {
+              "scan_interval": "Poll interval"
+            },
+            "data_description": {
+              "scan_interval": "Seconds between updates while the Mac is reachable. Every display is read separately, so short intervals mean steady traffic to the Mac; polling automatically slows down while it is unreachable."
+            }
+          },
+          "input_sources": {
+            "name": "Input sources",
+            "description": "One list per display that supports input switching. BetterDisplay reports all 12 inputs that DDC can address — DVI, VGA, composite and so on — not the ports the panel actually has, so most of them do nothing. Tick only the inputs your monitor really exposes; the rest stay out of the select entity."
+          },
+          "wake_on_lan": {
+            "name": "Wake-on-LAN",
+            "description": "Off by default, and worth leaving off: this has not been verified against a sleeping machine, and a Mac on AC power does not sleep at all, so there is usually nothing to wake. Enable it only if your Mac runs on battery and you have confirmed a magic packet actually wakes it.",
+            "data": {
+              "enable_wake_on_lan": "Send a magic packet before commands",
+              "mac_address": "MAC address"
+            },
+            "data_description": {
+              "enable_wake_on_lan": "When on, an unreachable Mac gets a magic packet and the command is retried while it boots its network stack back up.",
+              "mac_address": "MAC address of the Mac's active network interface. Wi-Fi and Ethernet have different addresses, and Wake-on-LAN over Wi-Fi is unreliable."
+            }
+          }
+        }
+      }
+    },
+    "error": {
+      "invalid_mac": "Enter a MAC address as six hex pairs, for example 00:1a:2b:3c:4d:5e."
+    }
+  }
+}

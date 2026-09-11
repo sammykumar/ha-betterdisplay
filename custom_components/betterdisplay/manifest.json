@@ -1,0 +1,12 @@
+{
+  "domain": "betterdisplay",
+  "name": "BetterDisplay",
+  "version": "0.1.0",
+  "documentation": "https://github.com/sammykumar/ha-betterdisplay",
+  "issue_tracker": "https://github.com/sammykumar/ha-betterdisplay/issues",
+  "iot_class": "local_polling",
+  "config_flow": true,
+  "integration_type": "hub",
+  "requirements": [],
+  "codeowners": ["@sammykumar"]
+}

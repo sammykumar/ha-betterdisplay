@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+# Home Assistant is the framework here, not a third-party dependency; without
+# this, import sorting fights the grouping every HA integration uses.
+known-first-party = ["homeassistant", "custom_components"]
