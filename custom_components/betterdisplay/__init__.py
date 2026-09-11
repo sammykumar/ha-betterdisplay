@@ -4,9 +4,12 @@ Talks to the BetterDisplay app's HTTP integration API on a Mac and exposes each
 attached display as a device with brightness, contrast, backlight, colour
 temperature and input-source entities.
 
-Capability probing is done once and stored on the config entry: it costs
-several requests per display per feature, and the answers only change when
-monitors are swapped -- which warrants a reconfigure anyway.
+Capability probing is cached on the config entry because it costs several
+requests per display per feature. Only positive answers are trusted from the
+cache: a feature was once classified unsupported on the first probe after the
+HTTP server started and then read cleanly every run afterwards, and a cached
+false negative would silently withhold an entity forever. Anything previously
+unsupported is therefore re-probed at each setup.
 """
 
 from __future__ import annotations
@@ -21,10 +24,18 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api import BetterDisplayClient, BetterDisplayError
 from .capability import probe_all
-from .const import CONF_CAPABILITIES, CONF_TOKEN, DEFAULT_PORT
+from .const import CAP_UNSUPPORTED, CONF_CAPABILITIES, CONF_TOKEN, DEFAULT_PORT
 from .coordinator import BetterDisplayCoordinator
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _has_unsupported(capabilities: dict[str, dict[str, str]]) -> bool:
+    """True if any cached verdict is a negative worth re-checking."""
+    return any(
+        CAP_UNSUPPORTED in features.values() for features in capabilities.values()
+    )
+
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -47,15 +58,21 @@ async def async_setup_entry(
         entry.data.get(CONF_TOKEN),
     )
 
-    capabilities: dict[str, dict[str, str]] | None = entry.data.get(CONF_CAPABILITIES)
-    if not capabilities:
+    cached: dict[str, dict[str, str]] = entry.data.get(CONF_CAPABILITIES) or {}
+    if cached and not _has_unsupported(cached):
+        capabilities = cached
+    else:
         try:
             capabilities = await probe_all(client, await client.list_displays())
         except BetterDisplayError as err:
-            raise ConfigEntryNotReady(f"Could not probe displays: {err}") from err
-        hass.config_entries.async_update_entry(
-            entry, data={**entry.data, CONF_CAPABILITIES: capabilities}
-        )
+            if not cached:
+                raise ConfigEntryNotReady(f"Could not probe displays: {err}") from err
+            _LOGGER.debug("Re-probe failed, keeping cached capabilities: %s", err)
+            capabilities = cached
+        if capabilities != cached:
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_CAPABILITIES: capabilities}
+            )
 
     coordinator = BetterDisplayCoordinator(hass, entry, client, capabilities)
     await coordinator.async_config_entry_first_refresh()

@@ -44,5 +44,6 @@ CAP_ASSUMED: Final = "assumed"
 CAP_UNSUPPORTED: Final = "unsupported"
 
 # A parameter failing once doesn't prove the display lacks it, so probing
-# retries before writing a feature off.
+# retries -- spaced out, since back-to-back retries just hit the same transient.
 CAPABILITY_PROBE_ATTEMPTS: Final = 3
+CAPABILITY_PROBE_DELAY: Final = 0.5

@@ -148,7 +148,7 @@ async def test_input_source_list_is_parsed(fake_server, make_client) -> None:
     assert sources["USB-C / TB 1"] == "6"
     # The full list is every DDC-addressable input, which is why the
     # integration makes the user narrow it rather than offering all of them.
-    assert len(sources) == 12
+    assert len(sources) == 40
 
 
 async def test_input_source_list_empty_when_unsupported(

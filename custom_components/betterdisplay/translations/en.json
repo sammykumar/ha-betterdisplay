@@ -63,7 +63,7 @@
           },
           "input_sources": {
             "name": "Input sources",
-            "description": "One list per display that supports input switching. BetterDisplay reports all 12 inputs that DDC can address — DVI, VGA, composite and so on — not the ports the panel actually has, so most of them do nothing. Tick only the inputs your monitor really exposes; the rest stay out of the select entity."
+            "description": "One list per display that supports input switching. BetterDisplay reports all 40 inputs that DDC can address — DVI, VGA, composite and so on — not the ports the panel actually has, so most of them do nothing. Tick only the inputs your monitor really exposes; the rest stay out of the select entity."
           },
           "wake_on_lan": {
             "name": "Wake-on-LAN",

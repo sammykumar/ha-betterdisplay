@@ -80,7 +80,7 @@ On luminance, separate reads of value and max were stable at `100` and `50` acro
 
 ### `inputSourceList` lists inputs the panel doesn't have
 
-It returns all 12 DDC-addressable input codes, not the ports physically on the monitor. There is no way to tell from the API which of the 12 are real. That is why input options are **user-configured** during setup rather than discovered — you pick the inputs your monitor actually has.
+It returns all 40 DDC-addressable input codes, not the ports physically on the monitor. There is no way to tell from the API which of the 40 are real. That is why input options are **user-configured** during setup rather than discovered — you pick the inputs your monitor actually has.
 
 ### `tagID` is per-session
 

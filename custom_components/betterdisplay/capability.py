@@ -11,6 +11,7 @@ not proof the display lacks the control.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from collections.abc import Awaitable, Callable
 from typing import Any
@@ -21,6 +22,7 @@ from .const import (
     CAP_READ,
     CAP_UNSUPPORTED,
     CAPABILITY_PROBE_ATTEMPTS,
+    CAPABILITY_PROBE_DELAY,
     FEATURE_BACKLIGHT,
     FEATURE_BRIGHTNESS,
     FEATURE_CONTRAST,
@@ -32,13 +34,21 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def _answers(read: Callable[[], Awaitable[Any]]) -> bool:
-    """True if a parameter returns a value within the retry budget."""
-    for _ in range(CAPABILITY_PROBE_ATTEMPTS):
+    """True if a parameter returns a value within the retry budget.
+
+    Attempts are spaced: a feature was once classified unsupported on the first
+    probe after the HTTP server started, then read cleanly on five consecutive
+    runs afterwards. Retrying with no gap reproduces whatever transient caused
+    that rather than getting past it.
+    """
+    for attempt in range(CAPABILITY_PROBE_ATTEMPTS):
         try:
             if await read() is not None:
                 return True
         except BetterDisplayError:
             return False
+        if attempt + 1 < CAPABILITY_PROBE_ATTEMPTS:
+            await asyncio.sleep(CAPABILITY_PROBE_DELAY)
     return False
 
 

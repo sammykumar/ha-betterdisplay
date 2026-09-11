@@ -54,7 +54,8 @@ IDENTIFIERS_PAYLOAD = """{
   "tagID" : "-1001"
 }"""
 
-# Every DDC-addressable input, not the ports the panel actually has.
+# Every DDC-addressable input code, captured verbatim. BetterDisplay reports
+# all of them regardless of which ports the panel actually has.
 INPUT_SOURCE_LIST = """1 - DisplayPort 1 [DDCController]
 2 - DisplayPort 2 [DDCController]
 3 - HDMI 1 [DDCController]
@@ -66,7 +67,35 @@ INPUT_SOURCE_LIST = """1 - DisplayPort 1 [DDCController]
 9 - USB-C / TB 4 [DDCController]
 10 - DVI 1 [DDCController]
 11 - DVI 2 [DDCController]
-12 - VGA 1 [DDCController]"""
+12 - VGA 1 [DDCController]
+13 - VGA 2 [DDCController]
+14 - DisplayPort 1 (LG alt) [DDCController]
+15 - DP 2 / USB-C (LG alt) [DDCController]
+16 - USB-C (LG alt) [DDCController]
+17 - HDMI 1 (LG alt) [DDCController]
+18 - HDMI 2 (LG alt) [DDCController]
+19 - Composite 1 (Legacy) [DDCController]
+20 - Composite 2 (Legacy) [DDCController]
+21 - S-Video 1 (Legacy) [DDCController]
+22 - S-Video 2 (Legacy) [DDCController]
+23 - Tuner 1 (Legacy) [DDCController]
+24 - Tuner 2 (Legacy) [DDCController]
+25 - Tuner 3 (Legacy) [DDCController]
+26 - Component 1 (Legacy) [DDCController]
+27 - Component 2 (Legacy) [DDCController]
+28 - Component 3 (Legacy) [DDCController]
+29 - Other 1 [DDCController]
+30 - Other 2 [DDCController]
+31 - Other 3 [DDCController]
+32 - Other 4 [DDCController]
+33 - Other 5 [DDCController]
+34 - Other 6 [DDCController]
+35 - Other 7 [DDCController]
+36 - Other 8 [DDCController]
+37 - Other 9 [DDCController]
+38 - Other 10 [DDCController]
+39 - Other 11 [DDCController]
+40 - Other 12 [DDCController]"""
 
 UUID_C49 = "2AACFE96-FD70-4864-A835-00B570AECA49"
 UUID_G95 = "711AB070-01BD-4906-84F3-E907E4BDE416"

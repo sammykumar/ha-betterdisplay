@@ -162,7 +162,7 @@ async def test_input_source_list_is_not_narrowed_by_probing(
     fake_server.respond(INPUT_SOURCE_LIST)
     sources = await make_client().list_input_sources(UUID_G95)
 
-    assert len(sources) == 12
+    assert len(sources) == 40
 
 
 @pytest.mark.parametrize(
@@ -180,3 +180,24 @@ async def test_every_feature_is_classified(feature: str) -> None:
     caps = await probe_display(StubClient(), DISPLAY)
 
     assert feature in caps
+
+
+async def test_cached_positives_are_trusted() -> None:
+    """A fully-positive cache should not trigger a re-probe."""
+    from custom_components.betterdisplay import _has_unsupported
+
+    cached = {UUID_G95: {FEATURE_BRIGHTNESS: CAP_READ, FEATURE_CONTRAST: CAP_ASSUMED}}
+
+    assert _has_unsupported(cached) is False
+
+
+async def test_cached_negative_triggers_reprobe() -> None:
+    """A transient failure must not withhold an entity forever."""
+    from custom_components.betterdisplay import _has_unsupported
+
+    cached = {
+        UUID_G95: {FEATURE_BRIGHTNESS: CAP_READ},
+        UUID_C49: {FEATURE_CONTRAST: CAP_UNSUPPORTED},
+    }
+
+    assert _has_unsupported(cached) is True
