@@ -32,7 +32,7 @@ class BetterDisplayReachableSensor(
     """Whether the Mac running BetterDisplay is answering."""
 
     _attr_has_entity_name = True
-    _attr_name = "Mac reachable"
+    _attr_translation_key = "mac_reachable"
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
