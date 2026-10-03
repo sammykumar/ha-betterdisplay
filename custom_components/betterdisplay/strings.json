@@ -65,6 +65,10 @@
             "name": "Input sources",
             "description": "One list per display that supports input switching. BetterDisplay reports all 40 inputs that DDC can address — DVI, VGA, composite and so on — not the ports the panel actually has, so most of them do nothing. Tick only the inputs your monitor really exposes; the rest stay out of the select entity."
           },
+          "input_codes": {
+            "name": "Raw input codes",
+            "description": "Only needed for monitors that ignore BetterDisplay's standard input codes, where switching reports success and nothing happens. One field per display: enter `Name=code` pairs separated by commas, for example `HDMI 1=5, DisplayPort 1=15`. A listed input is switched by writing its code straight to the panel's DDC input-select register (0–255) instead of through BetterDisplay; a name that is not in the input list above is added to the select. Leave a field empty to switch that display the standard way."
+          },
           "wake_on_lan": {
             "name": "Wake-on-LAN",
             "description": "Off by default, and worth leaving off: this has not been verified against a sleeping machine, and a Mac on AC power does not sleep at all, so there is usually nothing to wake. Enable it only if your Mac runs on battery and you have confirmed a magic packet actually wakes it.",
@@ -81,7 +85,8 @@
       }
     },
     "error": {
-      "invalid_mac": "Enter a MAC address as six hex pairs, for example 00:1a:2b:3c:4d:5e."
+      "invalid_mac": "Enter a MAC address as six hex pairs, for example 00:1a:2b:3c:4d:5e.",
+      "invalid_input_codes": "Raw input codes must be Name=code pairs separated by commas, each with a name and a whole-number code from 0 to 255, for example HDMI 1=5, DisplayPort 1=15."
     }
   },
   "entity": {

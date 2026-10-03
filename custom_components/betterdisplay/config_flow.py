@@ -42,6 +42,7 @@ from .const import (
     CAP_UNSUPPORTED,
     CONF_CAPABILITIES,
     CONF_ENABLE_WOL,
+    CONF_INPUT_CODES,
     CONF_INPUT_SOURCES,
     CONF_MAC,
     CONF_TOKEN,
@@ -54,6 +55,7 @@ from .const import (
 
 SECTION_POLLING: Final = "polling"
 SECTION_INPUT_SOURCES: Final = "input_sources"
+SECTION_INPUT_CODES: Final = "input_codes"
 SECTION_WAKE_ON_LAN: Final = "wake_on_lan"
 
 # No default: this ships publicly, so the field starts blank rather than
@@ -75,6 +77,25 @@ STEP_USER_SCHEMA: Final = vol.Schema(
         ),
     }
 )
+
+
+def parse_input_codes(text: str) -> dict[str, int]:
+    """Parse `Name=code, Name=code` into {name: code}, raising ValueError."""
+    codes: dict[str, int] = {}
+    for item in text.split(","):
+        if not item.strip():
+            continue
+        name, sep, raw = item.rpartition("=")
+        name, raw = name.strip(), raw.strip()
+        if not sep or not name or not raw.isdigit() or int(raw) > 255:
+            raise ValueError(f"not a Name=0-255 pair: {item.strip()!r}")
+        codes[name] = int(raw)
+    return codes
+
+
+def format_input_codes(codes: dict[str, int]) -> str:
+    """Render {name: code} back into the text the field accepts."""
+    return ", ".join(f"{name}={code}" for name, code in codes.items())
 
 
 def _describe(displays: list[Display]) -> str:
@@ -276,12 +297,22 @@ class BetterDisplayOptionsFlow(OptionsFlow):
             polling = user_input.get(SECTION_POLLING, {})
             wol = user_input.get(SECTION_WAKE_ON_LAN, {})
             selected = user_input.get(SECTION_INPUT_SOURCES, {})
+            entered = user_input.get(SECTION_INPUT_CODES, {})
+
+            input_codes: dict[str, dict[str, int]] = dict(
+                options.get(CONF_INPUT_CODES, {})
+            )
+            try:
+                for field, (uuid, _names) in choices.items():
+                    input_codes[uuid] = parse_input_codes(str(entered.get(field) or ""))
+            except ValueError:
+                errors["base"] = "invalid_input_codes"
 
             enable_wol = bool(wol.get(CONF_ENABLE_WOL, False))
             mac = str(wol.get(CONF_MAC, "")).strip()
             if enable_wol and not MAC_PATTERN.match(mac):
                 errors["base"] = "invalid_mac"
-            else:
+            if not errors:
                 input_sources: dict[str, list[str]] = dict(
                     options.get(CONF_INPUT_SOURCES, {})
                 )
@@ -294,12 +325,16 @@ class BetterDisplayOptionsFlow(OptionsFlow):
                             polling.get(CONF_SCAN_INTERVAL, UPDATE_INTERVAL)
                         ),
                         CONF_INPUT_SOURCES: input_sources,
+                        CONF_INPUT_CODES: input_codes,
                         CONF_ENABLE_WOL: enable_wol,
                         CONF_MAC: mac,
                     },
                 )
 
         stored_sources: dict[str, list[str]] = options.get(CONF_INPUT_SOURCES, {})
+        stored_codes: dict[str, dict[str, int]] = options.get(CONF_INPUT_CODES, {})
+        # Re-show what was typed after a validation error instead of losing it.
+        entered_codes: dict[str, str] = (user_input or {}).get(SECTION_INPUT_CODES, {})
         schema: dict[Any, Any] = {
             vol.Required(SECTION_POLLING): section(
                 vol.Schema(
@@ -344,6 +379,27 @@ class BetterDisplayOptionsFlow(OptionsFlow):
                     }
                 ),
                 {"collapsed": False},
+            )
+            schema[vol.Required(SECTION_INPUT_CODES)] = section(
+                vol.Schema(
+                    {
+                        vol.Optional(
+                            field,
+                            description={
+                                "suggested_value": entered_codes.get(
+                                    field,
+                                    format_input_codes(stored_codes.get(uuid, {})),
+                                )
+                            },
+                        ): TextSelector(
+                            TextSelectorConfig(
+                                type=TextSelectorType.TEXT, autocomplete="off"
+                            )
+                        )
+                        for field, (uuid, _names) in choices.items()
+                    }
+                ),
+                {"collapsed": True},
             )
 
         schema[vol.Required(SECTION_WAKE_ON_LAN)] = section(
