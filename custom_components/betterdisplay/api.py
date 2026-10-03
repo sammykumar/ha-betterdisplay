@@ -120,6 +120,10 @@ class BetterDisplayClient:
                 body = (await resp.text()).strip()
                 if resp.status in (401, 403):
                     raise BetterDisplayAuthError(body or f"HTTP {resp.status}")
+                # Newer BetterDisplay sends `Failed.` as a 404 rather than a 200;
+                # hand it back so reads treat it as unsupported, like the 200 form.
+                if resp.status == 404 and body == FAILED_SENTINEL:
+                    return body
                 if resp.status != 200:
                     raise BetterDisplayError(body or f"HTTP {resp.status}")
                 return body

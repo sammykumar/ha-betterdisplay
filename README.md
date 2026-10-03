@@ -74,7 +74,7 @@ It returns JSON objects separated by commas with no array brackets around them. 
 
 Errors are not signalled by status code. A refused read, an unknown UUID and an unsupported feature all return `200 OK` with the body `Failed.`, so the body is the error channel.
 
-BetterDisplay 5.0.6 has since been seen answering `Failed.` with a `404` instead, on both `get` and `set`. The client treats a non-200 status and a `Failed.` body alike, so either behaviour reads as an error.
+BetterDisplay 5.0.6 has since been seen answering `Failed.` with a `404` instead, on both `get` and `set`. The client accepts `Failed.` in either form: a read that gets it reports the feature as unsupported, and a write that gets it raises. Treating the 404 as a plain error instead once took down the whole integration over a single unsupported read.
 
 ### Input switching is a `perform`, not a `set`
 
