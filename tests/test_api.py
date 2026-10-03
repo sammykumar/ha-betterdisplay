@@ -66,6 +66,19 @@ async def test_failed_sentinel_reads_as_none(fake_server, make_client) -> None:
     assert await make_client().get_brightness(UUID_C49) is None
 
 
+async def test_failed_sentinel_as_404_reads_as_none(fake_server, make_client) -> None:
+    """BetterDisplay 5.0.6 answers an unsupported read with a 404 `Failed.`."""
+    fake_server.respond("Failed.", status=404)
+    assert await make_client().get_backlight(UUID_G95) is None
+
+
+async def test_failed_sentinel_as_404_on_write_raises(fake_server, make_client) -> None:
+    """The 404 form of `Failed.` must still fail a write."""
+    fake_server.respond("Failed.", status=404)
+    with pytest.raises(BetterDisplayError):
+        await make_client().set_brightness(UUID_C49, 0.5)
+
+
 async def test_failed_sentinel_on_write_raises(fake_server, make_client) -> None:
     """A rejected write must not look like a success."""
     fake_server.respond("Failed.")
