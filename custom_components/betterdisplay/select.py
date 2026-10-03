@@ -2,19 +2,26 @@
 
 One input-source select per display.
 
-This control is one-way. Switching a monitor's input sends it away from the
-Mac, and BetterDisplay only talks to the Mac -- so once the display is showing
-another machine there is no path back and nothing in Home Assistant can switch
-it again. Selecting an input is effectively "hand the monitor over"; getting it
-back is a job for the monitor's own buttons.
+Switching away from the Mac may be one-way, depending on the monitor. Some
+panels stop answering DDC on an inactive input, and then nothing in Home
+Assistant can switch them back. Others keep listening: both Samsung panels this
+was built against can be switched back by the Mac while they show another
+machine.
 
-Because of that, state is write-only: `current_option` is the last option this
-entity sent, and None before it has sent anything.
+Some panels also ignore BetterDisplay's standard input ids -- the switch
+reports success and nothing happens -- but obey a raw `inputSelect` write with
+the vendor's own number. Inputs with a raw code configured in the options flow
+are switched that way; everything else goes through `changeInputSource`.
+
+DDC input select can't be read back reliably, so state is write-only:
+`current_option` is the last option this entity sent, and None before it has
+sent anything.
 """
 
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING
 
 from homeassistant.components.select import SelectEntity
@@ -24,8 +31,13 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import BetterDisplayConfigEntry
-from .api import Display
-from .const import CAP_UNSUPPORTED, CONF_INPUT_SOURCES, FEATURE_INPUT_SOURCE
+from .api import BetterDisplayClient, Display
+from .const import (
+    CAP_UNSUPPORTED,
+    CONF_INPUT_CODES,
+    CONF_INPUT_SOURCES,
+    FEATURE_INPUT_SOURCE,
+)
 from .entity import BetterDisplayEntity
 
 if TYPE_CHECKING:
@@ -42,6 +54,7 @@ async def async_setup_entry(
     """Set up one input-source select per display that has any inputs."""
     coordinator = entry.runtime_data
     allowlists: dict[str, list[str]] = entry.options.get(CONF_INPUT_SOURCES, {})
+    all_codes: dict[str, dict[str, int]] = entry.options.get(CONF_INPUT_CODES, {})
 
     entities: list[BetterDisplayInputSource] = []
     for display in coordinator.displays.values():
@@ -53,14 +66,48 @@ async def async_setup_entry(
         # DVI and VGA ports the panel does not physically have. The user's
         # allowlist is the only thing that knows which are real; the full list
         # is a last resort so the entity is usable before it's configured.
-        allowed = allowlists.get(display.uuid)
-        options = allowed or sorted(coordinator.input_sources.get(display.uuid, {}))
+        codes = all_codes.get(display.uuid, {})
+        options = input_options(
+            allowlists.get(display.uuid, []),
+            coordinator.input_sources.get(display.uuid, {}),
+            codes,
+        )
         if not options:
             continue
 
-        entities.append(BetterDisplayInputSource(coordinator, display, options))
+        entities.append(BetterDisplayInputSource(coordinator, display, options, codes))
 
     async_add_entities(entities)
+
+
+def input_options(
+    allowed: list[str], sources: dict[str, str], codes: dict[str, int]
+) -> list[str]:
+    """Selectable inputs: the allowlist, else every reported input, plus coded ones.
+
+    A name with a raw code is offered even when BetterDisplay doesn't report it,
+    since the code alone is enough to switch to it.
+    """
+    options = list(allowed or sorted(sources))
+    options.extend(name for name in codes if name not in options)
+    return options
+
+
+def input_switch(
+    client: BetterDisplayClient,
+    uuid: str,
+    option: str,
+    codes: dict[str, int],
+    sources: dict[str, str],
+) -> Callable[[], Awaitable[None]] | None:
+    """The write that switches to `option`, or None if there is no way to."""
+    code = codes.get(option)
+    if code is not None:
+        return lambda: client.set_input_code(uuid, code)
+    source_id = sources.get(option)
+    if source_id is None:
+        return None
+    return lambda: client.set_input_source(uuid, source_id)
 
 
 class BetterDisplayInputSource(BetterDisplayEntity, SelectEntity):
@@ -74,10 +121,12 @@ class BetterDisplayInputSource(BetterDisplayEntity, SelectEntity):
         coordinator: BetterDisplayCoordinator,
         display: Display,
         options: list[str],
+        codes: dict[str, int],
     ) -> None:
         """Initialise the input-source select."""
         super().__init__(coordinator, display, FEATURE_INPUT_SOURCE)
         self._attr_options = options
+        self._codes = codes
         self._selected: str | None = None
 
     @property
@@ -95,18 +144,19 @@ class BetterDisplayInputSource(BetterDisplayEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         """Switch the display to the chosen input."""
-        sources = self.coordinator.input_sources.get(self._display.uuid, {})
-        source_id = sources.get(option)
-        if source_id is None:
+        switch = input_switch(
+            self.coordinator.client,
+            self._display.uuid,
+            option,
+            self._codes,
+            self.coordinator.input_sources.get(self._display.uuid, {}),
+        )
+        if switch is None:
             raise HomeAssistantError(
-                f"{self._display.name} does not report an input source named {option!r}"
+                f"{self._display.name} has no input source or raw code named {option!r}"
             )
 
-        await self.coordinator.async_command(
-            lambda: self.coordinator.client.set_input_source(
-                self._display.uuid, source_id
-            )
-        )
+        await self.coordinator.async_command(switch)
         self._selected = option
         self.coordinator.optimistic_set(
             self._display.uuid, FEATURE_INPUT_SOURCE, option

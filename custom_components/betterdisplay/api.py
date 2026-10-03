@@ -231,3 +231,11 @@ class BetterDisplayClient:
         answers `changeInputSource` with `Failed.`.
         """
         await self._perform(UUID=uuid, changeInputSource=source_id)
+
+    async def set_input_code(self, uuid: str, code: int) -> None:
+        """Write a raw value to the display's DDC input-select register.
+
+        For panels that ignore BetterDisplay's standard input ids and only
+        answer to their vendor's own numbers.
+        """
+        await self._set(UUID=uuid, ddc=None, vcp="inputSelect", value=code)

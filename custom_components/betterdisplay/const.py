@@ -15,6 +15,7 @@ CONF_TOKEN: Final = "token"
 CONF_ENABLE_WOL: Final = "enable_wake_on_lan"
 CONF_MAC: Final = "mac_address"
 CONF_INPUT_SOURCES: Final = "input_sources"
+CONF_INPUT_CODES: Final = "input_codes"
 CONF_CAPABILITIES: Final = "capabilities"
 
 # Polling backs off while the Mac is asleep so a closed lid doesn't cost a

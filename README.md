@@ -13,7 +13,7 @@ One device per display, plus one connectivity sensor for the Mac itself.
 | Display | `light` | Brightness, and on/off mapped to the panel's hardware backlight |
 | Contrast | `number` | BetterDisplay's `hardwareContrast`, where the display answers for it |
 | Colour temperature | `number` | BetterDisplay's temperature offset |
-| Input source | `select` | Switches the panel's DDC input (write-only — see below) |
+| Input source | `select` | Switches the panel's DDC input (write-only, and switching away may be one-way — see below) |
 | Connected | `binary_sensor` | Whether the Mac is answering on the BetterDisplay port |
 
 Not every display gets every entity. Which ones appear depends on what the panel answered during capability probing.
@@ -62,7 +62,7 @@ Three things fall out of that run, all measured rather than inferred:
 
 An earlier reading of this hardware concluded the opposite — that `get?brightness` ignored the panel — on the strength of a single anomalous DDC luminance sample (`15` of max `50`). The write-and-restore run above disproved it.
 
-So the integration does not touch raw DDC at all. State and writes both go through BetterDisplay's own parameters: `brightness`, `hardwareContrast`, `temperature`, `hardwareBacklight` and `changeInputSource`. A display that doesn't answer a given parameter doesn't get a fabricated number — it gets an assumed-state entity reporting whatever was last written, or no entity at all.
+So the integration reads no raw DDC registers. State and writes go through BetterDisplay's own parameters: `brightness`, `hardwareContrast`, `temperature`, `hardwareBacklight` and `changeInputSource`. The one exception is an opt-in raw input-select write for panels that ignore `changeInputSource` (see below). A display that doesn't answer a given parameter doesn't get a fabricated number — it gets an assumed-state entity reporting whatever was last written, or no entity at all.
 
 ## Other API quirks
 
@@ -79,6 +79,21 @@ BetterDisplay 5.0.6 has since been seen answering `Failed.` with a `404` instead
 ### Input switching is a `perform`, not a `set`
 
 `changeInputSource` is an action, so it only works through `/perform`. Sent to `/set` it comes back `Failed.` even when the target is the input the panel is already on. The value is the id from `inputSourceList` (`3` for `3 - HDMI 1 [DDCController]`).
+
+### Some panels ignore BetterDisplay's input codes
+
+On both Samsung panels this was built against, switching input through BetterDisplay — its own menu or `/perform?changeInputSource` — reports success and nothing happens. The panels do switch on a raw DDC write to the input-select register, but with Samsung's own vendor numbers rather than the standard codes BetterDisplay sends:
+
+| Display | Input | Raw code |
+| --- | --- | --- |
+| Odyssey G95NC | HDMI 1 | `5` |
+| Odyssey G95NC | DisplayPort 1 | `15` |
+| C49RG9x | DisplayPort 2 | `9` |
+| C49RG9x | HDMI 1 | `6` |
+
+For panels like these, the options flow has a collapsed **Raw input codes** section with one field per display. Enter `Name=code` pairs separated by commas, for example `HDMI 1=5, DisplayPort 1=15`. Selecting a listed input then sends `/set?UUID=<uuid>&ddc&vcp=inputSelect&value=<code>` instead of `changeInputSource`; inputs without a code still go through `/perform`. A name doesn't have to appear in `inputSourceList` — it is added to the select either way. Leave the field empty to go back to BetterDisplay's own codes.
+
+To find a panel's codes, send `/set?UUID=<uuid>&ddc&vcp=inputSelect&value=N` for one value of `N` at a time and watch which input the panel lands on. Samsung uses small vendor numbers; the C49RG90's valid range, for example, is 0–14. A value the panel refuses comes back as a `404` with the body `Failed.`
 
 ### Reading a DDC value with its max means different things on different registers
 
@@ -120,7 +135,7 @@ When the probe fails, the integration keeps its last known state, marks entities
 
 - **Volume and mute.** BetterDisplay exposes them; nothing here uses them yet.
 - **Per-channel gain and black level.** Same.
-- **Reading back the current input source.** DDC input select is write-only in practice, and switching a monitor's input sends it away from the Mac — at which point nothing in Home Assistant can switch it back, because the Mac is no longer the thing on the other end of the cable. Switch away with care.
+- **Reading back the current input source.** DDC input select is write-only in practice, so the select reports the last input it sent. Switching away from the Mac may also be one-way, depending on the monitor: some panels stop answering DDC on an inactive input, and then nothing in Home Assistant can switch them back. Others keep listening — both Samsung panels above can be switched back by the Mac while they are showing another machine. Test yours before relying on it.
 
 ## Licence
 

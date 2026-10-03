@@ -176,6 +176,25 @@ async def test_rejected_input_switch_raises(fake_server, make_client) -> None:
         await make_client().set_input_source(UUID_G95, "3")
 
 
+async def test_raw_input_code_is_a_ddc_set(fake_server, make_client) -> None:
+    """Some panels ignore `changeInputSource` but obey a raw `inputSelect` write."""
+    fake_server.respond("")
+    await make_client().set_input_code(UUID_G95, 15)
+
+    assert fake_server.requests[-1].path == "/set"
+    assert fake_server.last_query["UUID"] == UUID_G95
+    assert fake_server.last_query["ddc"] == ""
+    assert fake_server.last_query["vcp"] == "inputSelect"
+    assert fake_server.last_query["value"] == "15"
+
+
+async def test_rejected_input_code_raises(fake_server, make_client) -> None:
+    """A refused DDC write comes back as a 404 `Failed.`."""
+    fake_server.respond("Failed.", status=404)
+    with pytest.raises(BetterDisplayError):
+        await make_client().set_input_code(UUID_G95, 15)
+
+
 async def test_non_numeric_read_is_none_not_an_exception(
     fake_server, make_client
 ) -> None:
