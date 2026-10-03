@@ -23,5 +23,5 @@ jobs:
       - uses: hacs/action@main
         with:
           category: integration
-          # This integration has no brand images in home-assistant/brands. If the
-          # HACS action starts failing on the brands check, add: ignore: brands
+          # This integration has no brand images in home-assistant/brands.
+          ignore: brands
