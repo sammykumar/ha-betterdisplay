@@ -134,6 +134,7 @@ async def fake_server():
     app = web.Application()
     app.router.add_get("/get", fake.handle)
     app.router.add_get("/set", fake.handle)
+    app.router.add_get("/perform", fake.handle)
     server = TestServer(app)
     await server.start_server()
     fake.host = server.host

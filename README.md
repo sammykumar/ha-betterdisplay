@@ -74,6 +74,12 @@ It returns JSON objects separated by commas with no array brackets around them. 
 
 Errors are not signalled by status code. A refused read, an unknown UUID and an unsupported feature all return `200 OK` with the body `Failed.`, so the body is the error channel.
 
+BetterDisplay 5.0.6 has since been seen answering `Failed.` with a `404` instead, on both `get` and `set`. The client treats a non-200 status and a `Failed.` body alike, so either behaviour reads as an error.
+
+### Input switching is a `perform`, not a `set`
+
+`changeInputSource` is an action, so it only works through `/perform`. Sent to `/set` it comes back `Failed.` even when the target is the input the panel is already on. The value is the id from `inputSourceList` (`3` for `3 - HDMI 1 [DDCController]`).
+
 ### Reading a DDC value with its max means different things on different registers
 
 On luminance, separate reads of value and max were stable at `100` and `50` across five consecutive samples, and the combined `--value --max` form returned `100,50` — so there it really is (value, max). On `inputSelect` the same form returned `15,3`, which matches neither ordering against the panel's 1–40 input list. The pair is register-dependent and was only pinned down on one display, so nothing here depends on it; the integration reads no DDC registers.

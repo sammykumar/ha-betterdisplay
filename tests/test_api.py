@@ -159,6 +159,23 @@ async def test_input_source_list_empty_when_unsupported(
     assert await make_client().list_input_sources(UUID_C49) == {}
 
 
+async def test_input_switch_is_a_perform_not_a_set(fake_server, make_client) -> None:
+    """`changeInputSource` is an action: `/set` rejects it with `Failed.`."""
+    fake_server.respond("")
+    await make_client().set_input_source(UUID_G95, "3")
+
+    assert fake_server.requests[-1].path == "/perform"
+    assert fake_server.last_query["changeInputSource"] == "3"
+    assert fake_server.last_query["UUID"] == UUID_G95
+
+
+async def test_rejected_input_switch_raises(fake_server, make_client) -> None:
+    """BetterDisplay answers a failed action with a 404."""
+    fake_server.respond("Failed.", status=404)
+    with pytest.raises(BetterDisplayError):
+        await make_client().set_input_source(UUID_G95, "3")
+
+
 async def test_non_numeric_read_is_none_not_an_exception(
     fake_server, make_client
 ) -> None:

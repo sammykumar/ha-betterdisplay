@@ -139,6 +139,12 @@ class BetterDisplayClient:
         if body == FAILED_SENTINEL:
             raise BetterDisplayError(f"BetterDisplay rejected set with {params!r}")
 
+    async def _perform(self, **params: Any) -> None:
+        """Run an action, raising when BetterDisplay reports failure."""
+        body = await self._request("perform", **params)
+        if body == FAILED_SENTINEL:
+            raise BetterDisplayError(f"BetterDisplay rejected perform with {params!r}")
+
     async def list_displays(self) -> list[Display]:
         """Enumerate connected displays."""
         raw = await self._request("get", identifiers=None)
@@ -219,5 +225,9 @@ class BetterDisplayClient:
         return sources
 
     async def set_input_source(self, uuid: str, source_id: str) -> None:
-        """Switch the display to a DDC input id."""
-        await self._set(UUID=uuid, changeInputSource=source_id)
+        """Switch the display to a DDC input id.
+
+        An action rather than a value, so it goes through `/perform`: `/set`
+        answers `changeInputSource` with `Failed.`.
+        """
+        await self._perform(UUID=uuid, changeInputSource=source_id)
