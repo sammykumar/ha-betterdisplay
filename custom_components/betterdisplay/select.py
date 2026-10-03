@@ -62,7 +62,7 @@ async def async_setup_entry(
         if caps.get(FEATURE_INPUT_SOURCE) == CAP_UNSUPPORTED:
             continue
 
-        # BetterDisplay reports all twelve DDC-addressable inputs, including
+        # BetterDisplay reports all 40 DDC-addressable inputs, including
         # DVI and VGA ports the panel does not physically have. The user's
         # allowlist is the only thing that knows which are real; the full list
         # is a last resort so the entity is usable before it's configured.
