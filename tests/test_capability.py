@@ -39,6 +39,7 @@ class StubClient:
             "contrast": 0.75,
             "temperature": 0.0,
             "input_sources": {"HDMI 1": "3"},
+            "displays": [DISPLAY],
             **answers,
         }
         self.calls: list[str] = []
@@ -51,6 +52,10 @@ class StubClient:
         if isinstance(value, list):
             return value.pop(0)
         return value
+
+    async def list_displays(self):
+        self.calls.append("displays")
+        return self.answers["displays"]
 
     async def get_brightness(self, uuid):
         return await self._answer("brightness")
@@ -201,3 +206,28 @@ async def test_cached_negative_triggers_reprobe() -> None:
     }
 
     assert _has_unsupported(cached) is True
+
+
+async def test_display_missing_from_cache_is_probed() -> None:
+    """A display whose UUID changed must not inherit an empty capability set."""
+    from custom_components.betterdisplay import _async_capabilities
+
+    client = StubClient(displays=[DISPLAY])
+    cached = {UUID_C49: {FEATURE_BRIGHTNESS: CAP_READ, FEATURE_CONTRAST: CAP_READ}}
+
+    caps = await _async_capabilities(client, cached)
+
+    assert caps[UUID_G95][FEATURE_BRIGHTNESS] == CAP_READ
+
+
+async def test_cache_covering_every_display_is_not_reprobed() -> None:
+    """Probing costs several requests per display; a full cache skips it."""
+    from custom_components.betterdisplay import _async_capabilities
+
+    client = StubClient(displays=[DISPLAY])
+    cached = {UUID_G95: {FEATURE_BRIGHTNESS: CAP_READ, FEATURE_CONTRAST: CAP_READ}}
+
+    caps = await _async_capabilities(client, cached)
+
+    assert caps == cached
+    assert "brightness" not in client.calls
