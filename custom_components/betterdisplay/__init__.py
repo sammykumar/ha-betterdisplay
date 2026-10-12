@@ -37,6 +37,31 @@ def _has_unsupported(capabilities: dict[str, dict[str, str]]) -> bool:
     )
 
 
+async def _async_capabilities(
+    client: BetterDisplayClient, cached: dict[str, dict[str, str]]
+) -> dict[str, dict[str, str]]:
+    """Reuse the cached capabilities, or re-probe when they can't be trusted.
+
+    A display whose UUID is not in the cache has to be probed too: macOS hands
+    a monitor a new UUID when it moves to a different cable, and without an
+    entry for it every one of its entities stays unknown.
+    """
+    try:
+        displays = await client.list_displays()
+        if (
+            cached
+            and not _has_unsupported(cached)
+            and all(display.uuid in cached for display in displays)
+        ):
+            return cached
+        return await probe_all(client, displays)
+    except BetterDisplayError as err:
+        if not cached:
+            raise ConfigEntryNotReady(f"Could not probe displays: {err}") from err
+        _LOGGER.debug("Re-probe failed, keeping cached capabilities: %s", err)
+        return cached
+
+
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
     Platform.LIGHT,
@@ -59,20 +84,11 @@ async def async_setup_entry(
     )
 
     cached: dict[str, dict[str, str]] = entry.data.get(CONF_CAPABILITIES) or {}
-    if cached and not _has_unsupported(cached):
-        capabilities = cached
-    else:
-        try:
-            capabilities = await probe_all(client, await client.list_displays())
-        except BetterDisplayError as err:
-            if not cached:
-                raise ConfigEntryNotReady(f"Could not probe displays: {err}") from err
-            _LOGGER.debug("Re-probe failed, keeping cached capabilities: %s", err)
-            capabilities = cached
-        if capabilities != cached:
-            hass.config_entries.async_update_entry(
-                entry, data={**entry.data, CONF_CAPABILITIES: capabilities}
-            )
+    capabilities = await _async_capabilities(client, cached)
+    if capabilities != cached:
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_CAPABILITIES: capabilities}
+        )
 
     coordinator = BetterDisplayCoordinator(hass, entry, client, capabilities)
     await coordinator.async_config_entry_first_refresh()
