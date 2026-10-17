@@ -21,10 +21,17 @@ from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.device_registry import DeviceEntry
 
 from .api import BetterDisplayClient, BetterDisplayError
 from .capability import probe_all
-from .const import CAP_UNSUPPORTED, CONF_CAPABILITIES, CONF_TOKEN, DEFAULT_PORT
+from .const import (
+    CAP_UNSUPPORTED,
+    CONF_CAPABILITIES,
+    CONF_TOKEN,
+    DEFAULT_PORT,
+    DOMAIN,
+)
 from .coordinator import BetterDisplayCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -92,6 +99,28 @@ async def async_unload_entry(
 ) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: BetterDisplayConfigEntry, device: DeviceEntry
+) -> bool:
+    """Allow removing a display the Mac no longer reports.
+
+    A display's UUID changes when it moves to another Mac or another cable, which
+    leaves the old device behind with no entities. The Mac's own device and any
+    display still reported stay put, since setup would only recreate them.
+    """
+    return is_stale_device(
+        device.identifiers, entry.entry_id, set(entry.runtime_data.displays)
+    )
+
+
+def is_stale_device(
+    identifiers: set[tuple[str, str]], entry_id: str, current_uuids: set[str]
+) -> bool:
+    """True when none of a device's identifiers belong to a live display."""
+    ours = {value for domain, value in identifiers if domain == DOMAIN}
+    return bool(ours) and not ours & (current_uuids | {entry_id})
 
 
 async def _async_reload_entry(
